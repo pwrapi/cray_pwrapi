@@ -1,0 +1,144 @@
+#!/bin/bash
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+#
+# This script can be used to create RPMs from the source directory, using
+# the existing OS and architecture (rather than a customized chroot build
+# environment).
+#
+# NOTE: Do NOT add this to the specfile, nor to the automake, there is no
+# point. This is part of the GIT clone image, and should only be used from
+# within the local clone -- it has no purpose anywhere else (e.g. in /sbin,
+# or within the released RPMs.)
+
+## Usage information
+#  $@ = error information to be displayed
+function usage
+{
+    if [[ $# -gt 0 ]]; then
+        echo "$@"
+        echo
+    fi
+    cat <<EOF
+Usage: makerpms [-d build_dir] sources
+       makerpms [-d build_dir] rpms [options]
+       makerpms [-d build_dir] install
+
+  sources = creates only the source tarball needed by rpmbuild to create RPMs
+  rpms    = creates RPMs using the specified rpmbuild options (default = -ba)
+  install = creates RPMs and installs them on this machine
+
+  -d build_dir = set the build directory (default == ~/craybuild)
+EOF
+    exit 1
+}
+
+## Make selected commands visible in stdout before executing
+#  $@ = command to execute (using eval)
+function logdo
+{
+    echo "+ $@"
+    eval "$@"
+}
+
+## If logdo on a command fails, stop running
+#  $@ = command to execute (using eval)
+function faildo
+{
+    if ! logdo $@; then
+        echo "FAILED"
+        exit 1
+    fi
+}
+
+## Prepare the environment for building
+#  $1 = build directory
+#  NOTE: This overrides any %_topdir declaration in ~/.rpmmacros
+function setup
+{
+    faildo mkdir -p $1/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+    if grep -q '%_topdir' ~/.rpmmacros 2>/dev/null; then
+        sed -i -e "s:%_topdir.*:%_topdir $1" ~/.rpmmacros
+    else
+        echo "%_topdir $1" >>~/.rpmmacros
+    fi
+}
+
+## Create the wource tarball needed by rpmbuild
+#  $1 = build directory
+function mksources
+{
+    setup $1
+    faildo rm -rf $1/SOURCES/cray-powerapi-1.0.tar.bz2
+    faildo tar --exclude=.git --transform='s/^\./cray-powerapi-1.0/' -jcvf $1/SOURCES/cray-powerapi-1.0.tar.bz2 .
+}
+
+## Create new RPMs from the current sources
+#  $1 = build directory
+#  $2 = options to use with rpmbuild (default == '-ba' if omitted)
+function mkrpms
+{
+    mksources $1
+    opts="${2:--ba}"
+    faildo rm -rf $1/BUILD/cray-powerapi-1.0
+    faildo rm -rf $1/RPMS/cray*powerapi*
+    faildo rpmbuild $opts cray-powerapi.spec
+}
+
+## Create new RPMs and install them
+#  $1 = build directory
+function mkinstall
+{
+    mkrpms $1 '-ba'
+    # Find the complete list of RPMs created
+    rpms=$(find $1/RPMS -name '*.rpm')
+    # Find out what is currently installed
+    pkgs=$(rpm -qa | grep 'cray.*powerapi' | sed 's/-1.0-.*$/-1.0/')
+    # Remove the old RPMs (may fail if nothing installed)
+    if [[ -n "$pkgs" ]]; then
+        logdo rpm -e $pkgs
+    fi
+    # Install the new
+    faildo rpm -ivh $rpms
+    # Make sure dynamic library cache is updated
+    ldconfig
+}
+
+################################
+
+# Parse command line options
+build=~/craybuild
+while getopts "d:h" opt; do
+    case "$opt" in
+    d) build=$OPTARG ;;
+    h) usage ;;
+    *) usage "Unknown option -$opt" ;;
+    esac
+done
+shift $(($OPTIND - 1))
+if [[ $# -lt 1 ]]; then
+    usage "Must specify sources, rpms, or install"
+fi
+action="$1"
+shift 1
+options="$@"
+
+# Act on the specified command
+echo "+ makerpms $action"
+case "$action" in
+sources)
+    mksources $build
+    ;;
+rpms)
+    mkrpms $build "$options"
+    ;;
+install)
+    mkinstall $build
+    ;;
+*)
+    usage "Action '$action' unknown"
+    ;;
+esac
+
+

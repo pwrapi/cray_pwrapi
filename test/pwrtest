@@ -1,0 +1,335 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016-2018, Cray Inc.
+#  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# pwrtest - High level test harness for testing all PowerAPI software
+#
+# JSON Data Structure:
+#
+# {
+#       "date":         STRING,
+#       "cname":        STRING,
+#       "nid":          STRING,
+#       "uid":          INTEGER,
+#       "pid":          INTEGER,
+#       "path":         STRING,
+#       "subsystem":
+#       [
+#               "name":         STRING,
+#               "tests":
+#               [
+#                       "name":         STRING,
+#                       "desc":         STRING,
+#                       "result":       STRING,
+#                       "path":         STRING,
+#                       "exit_code":    INTEGER,
+#                       "output_file":  STRING,
+#               ],
+#       ],
+#       "summary":
+#       {
+#               "passes":       INTEGER,
+#               "failures":     INTEGER,
+#               "total":        INTEGER,
+#       }
+# }
+
+import datetime
+import getopt
+import json
+import os
+import pprint
+import re
+import signal
+import subprocess
+import sys
+
+#
+# signal_handler - If pwrtest seems hung up ^C can be entered to see where
+#                  execution currently is.
+#
+def signal_handler(signum, frame):
+    sh_output = {}
+    sh_output['signum'] = signum
+    sh_output['subsystem'] = subsystem_name
+    sh_output['test'] = test_path
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(sh_output)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+#
+# usage - Print a usage message for the test harness.
+#
+def usage():
+    print "pwrtest"
+    print "        [-f/--failures]           Report only failures"
+    print "        [-h/--help]               Print this help message"
+    print "        [-s/--subsystem SUBSYS]   SUBSYS =",
+    print '|'.join(str(subsystem) for subsystem in possible_subsystems)
+    print "        [-S/--summary]            Report only a summary"
+
+#
+# Global defines
+#
+failure_dir = "/tmp/pwrtest/" + str(os.getpid()) + "/"
+subsystems_dir = "/opt/cray/powerapi/default/bin/test/subsystems"
+possible_subsystems = []
+subsystems = []
+num_tests = 0
+num_skip = 0
+num_pass = 0
+num_fail = 0
+report_pass = True
+report_only_summary = False
+subsystem_name = None           # For ^C debug
+test_path = None
+
+#
+# Get list of possible subsystems and filter out any that aren't directories
+#
+possible_subsystems = os.listdir(subsystems_dir)
+for subsystem in possible_subsystems:
+    if subsystem == "common":
+        possible_subsystems.remove(subsystem)
+    subsystem_path = subsystems_dir + "/" + subsystem
+    if not os.path.isdir(subsystem_path):
+        possible_subsystems.remove(subsystem)
+possible_subsystems.sort()
+
+#
+# Parse command line args
+#
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "fhs:S",
+                               ["failures", "help", "subsystem=", "summary"])
+except getopt.GetoptError:
+    usage()
+    sys.exit(2)
+
+for opt, arg in opts:
+    if opt in ("-f", "--failures"):
+        report_pass = False
+    elif opt in ("-h", "--help"):
+        usage()
+        sys.exit()
+    elif opt in ("-s", "--subsystem"):
+        if arg not in possible_subsystems:
+            print 'Invalid -t/--subsystem argument: ' + arg
+            usage()
+            sys.exit(2)
+        subsystems.append(arg)
+    elif opt in ("-S", "--summary"):
+        report_only_summary = True
+    else:
+        usage()
+        sys.exit(2)
+
+#
+# If no subsystem specified, add them all
+#
+if len(subsystems) == 0:
+    subsystems = possible_subsystems
+
+#
+# Generate initial output
+#
+output = {}
+output['date'] = datetime.datetime.now().isoformat()
+try:
+    with open("/proc/cray_xt/cname") as f:
+        output['cname'] = f.read().strip()
+except:
+    output['cname'] = "Unknown"
+try:
+    with open("/proc/cray_xt/nid") as f:
+        output['nid'] = f.read().strip()
+except:
+    output['nid'] = "Unknown"
+output['uid'] = os.getuid()
+output['pid'] = os.getpid()
+output['path'] = os.path.abspath(sys.argv[0])
+if not report_only_summary:
+    output['subsystems'] = []
+
+#
+# Set the environment to search for common modules. This won't apply to this
+# script, but it will be inherited by all subprocess calls.
+#
+old = os.environ['PYTHONPATH'].split(':') if 'PYTHONPATH' in os.environ else []
+old = [subsystems_dir + "/common"] + old
+os.environ['PYTHONPATH'] = ':'.join(old)
+
+#
+# Step through each subsystem
+#
+for subsystem in subsystems:
+    #
+    # Register subsystem name in case we need to dump when ^C entered
+    #
+    subsystem_name = str(subsystem)
+
+    #
+    # Construct full path name to this subsystem
+    #
+    subsystem_path = subsystems_dir + "/" + subsystem
+
+    #
+    # Get a list of all tests for this subsystem
+    #
+    tests = os.listdir(subsystem_path)
+
+    #
+    # If there aren't any tests yet for this subsystem, move on to the next
+    #
+    if len(tests) == 0:
+        continue
+
+    #
+    # Execute the tests for this subsystem
+    #
+    output_tests = []
+    for test in sorted(tests):
+        #
+        # Construct full path name to this test
+        #
+        test_path = subsystems_dir + "/" + subsystem + "/" + test
+
+        #
+        # Directories aren't tests!
+        #
+        if os.path.isdir(test_path):
+            continue
+
+        #
+        # If test isn't executable, move on to the next one
+        #
+        if not os.access(test_path, os.X_OK):
+            continue
+
+        #
+        # Output for both failures and success
+        #
+        output_test = {}
+        output_test['name'] = test
+
+        #
+        # Execute the test and grab the exit code
+        #
+        p = subprocess.Popen(test_path, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             bufsize=-1)
+        test_output = p.communicate()
+        num_tests += 1
+
+        # Search for SKIP messages
+        skipped = None
+        for line in test_output[0].split('\n'):
+            match = re.match("SKIP [^:]*: (.*)", line)
+            if match:
+                skipped = match.group(1)
+                break
+
+        #
+        # Print and process SKIP, PASS, and FAIL
+        #
+        if skipped != None:
+            num_skip += 1
+
+            if report_pass:
+                output_test['result'] = "SKIP"
+                output_test['reason'] = skipped
+                output_tests.append(output_test)
+
+        elif p.returncode == 0:
+            num_pass += 1
+
+            #
+            # Print pass output
+            #
+            if report_pass:
+                output_test['result'] = "PASS"
+                output_tests.append(output_test)
+        else:
+            num_fail += 1
+
+            #
+            # Write output from the failed test to /tmp
+            #
+            subsystem_failure_dir = failure_dir + subsystem + "/"
+            if not os.path.exists(subsystem_failure_dir):
+                try:
+                    os.makedirs(subsystem_failure_dir)
+                except:
+                    # If we can't write to the default, we likely don't have
+                    # permissions on /tmp/pwrtest, so write instead to
+                    # /tmp/pwrtest-[pid]
+                    failure_dir = "/tmp/pwrtest-" + str(os.getpid()) + "/"
+                    subsystem_failure_dir = failure_dir + subsystem + "/"
+                    os.makedirs(subsystem_failure_dir)
+
+            failure_file = subsystem_failure_dir + test
+
+            with open(failure_file, 'w') as f:
+                f.write(test_output[0])
+
+            #
+            # Print fail output
+            #
+            output_test['result'] = "FAIL"
+            output_test['path'] = test_path
+            output_test['exit_code'] = p.returncode
+            output_test['output'] = failure_file
+            output_tests.append(output_test)
+    #
+    # Add this subsystem report only if there's a report to report and
+    # we're not in summary only mode
+    #
+    if len(output_tests) != 0 and not report_only_summary:
+        output_subsystem = {}
+        output_subsystem['name'] = str(subsystem)
+        output_subsystem['tests'] = output_tests
+        output['subsystems'].append(output_subsystem)
+
+#
+# Add summary
+#
+output['summary'] = {}
+output['summary']['skip'] = num_skip
+output['summary']['pass'] = num_pass
+output['summary']['fail'] = num_fail
+output['summary']['total'] = num_tests
+
+json.dump(output, sys.stdout, indent=2)
+
+# add an ending newline since json.dump() doesn't
+print

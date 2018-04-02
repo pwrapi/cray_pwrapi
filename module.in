@@ -1,0 +1,15 @@
+#%Module
+#
+#  module
+#
+
+prepend-path LD_LIBRARY_PATH @libdir@
+if { [ file exists @sbindir@ ] } {
+	prepend-path PATH @sbindir@
+}
+if { [ file exists @bindir@ ] } {
+	prepend-path PATH @bindir@
+}
+if { [ file exists @mandir@ ] } {
+	prepend-path MANPATH @mandir@
+}

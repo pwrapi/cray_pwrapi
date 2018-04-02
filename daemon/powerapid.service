@@ -1,0 +1,13 @@
+[Unit]
+Description=PowerAPI Control Daemon
+
+[Service] 
+WorkingDirectory=/var/opt/cray/powerapi/run/powerapid
+PIDFile=/var/opt/cray/powerapi/run/powerapid.pid
+Type=forking
+ExecStart=/opt/cray/powerapi/default/sbin/powerapid --pidfile /var/opt/cray/powerapi/run/powerapid.pid
+StandardOutput=kmsg+console
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

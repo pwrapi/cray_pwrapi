@@ -1,0 +1,302 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+#  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Create a simulation environment for testing on a VM
+
+import getopt
+import os
+import sys
+
+## Define the simulated architecture
+#
+max_cpu = 512           # Linux system limit
+ht_per_core = 2         # hyperthreads per core
+num_cstates = 5         # total number of cstates
+avail_freqs = [         # list of supported frequencies
+               2501000,
+               2500000,
+               2400000,
+               2300000,
+               2200000,
+               2100000,
+               2000000,
+               1900000,
+               1800000,
+               1700000,
+               1600000,
+               1500000,
+               1400000,
+               1300000,
+               1200000
+]
+avail_govs = [
+    "conservative",
+    "ondemand",
+    "userspace",
+    "powersave",
+    "performance"
+]
+
+cpuinfofmt = """processor   : {}
+vendor_id   : GenuineIntel
+cpu family  : 6
+model       : 45
+model name  : Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz
+stepping    : 7
+microcode   : 0x70d
+cpu MHz     : 2601.000
+cache size  : 20480 KB
+physical id : {}
+siblings    : 16
+core id     : {}
+cpu cores   : 8
+apicid      : {}
+initial apicid  : {}
+fpu     : yes
+fpu_exception   : yes
+cpuid level : 13
+wp      : yes
+flags       : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic popcnt tsc_deadline_timer aes xsave avx lahf_lm ida arat epb xsaveopt pln pts dtherm tpr_shadow vnmi flexpriority ept vpid
+bogomips    : 5199.77
+clflush size    : 64
+cache_alignment : 64
+address sizes   : 46 bits physical, 48 bits virtual
+power management:
+"""
+
+## Hierarchy
+#  socket is an array containing core information
+#  "pos" is possible cores
+#  "act" is actual (present) cores
+#  "onl" is online cores
+#
+#  Each of the core items is a list of core ID numbers
+#  These do not need to be contiguous (and usually aren't in practice)
+socket = [
+    {
+        "pos": range(0, 6) + range(8, 14),
+        "act": range(0, 6) + range(8, 14),
+        "onl": range(0, 6) + range(8, 14)
+    },
+    {
+        "pos": range(0, 6) + range(8, 14),
+        "act": range(0, 6) + range(8, 14),
+        "onl": range(0, 6) + range(8, 14)
+    },
+]
+
+# Used to fill out the cpuinfo list
+max_cores_per_socket = 16
+max_hts_per_socket = max_cores_per_socket * ht_per_core
+
+## Workhorse, to create the simulated /sys files
+def putfile(file, value):
+    try:
+        os.makedirs(os.path.dirname(file))
+    except:
+        pass
+    try:
+        with open(file, 'w') as fp:
+            fp.write(str(value) + "\n")
+    except:
+        print "Failed to write file '{}'".format(file)
+
+## Convert a list of hyperthreads (which need not be contiguous
+#  into range in the [beg[-end],...] format.
+def mkrange(hts):
+    # Initialize to negative numbers as a special case
+    first = -1
+    last = -1
+    # Create a list of (beg, end) duples
+    rng = []
+    for ht in hts:
+        # First HT in the list need not be 0
+        if first < 0:
+            first = ht
+        # If we hit a discontinuity, add a range
+        if last >= 0 and ht != last + 1:
+            rng.append((first, last))
+            first = ht
+        # Keep track of the last HT seen
+        last = ht
+    # Loop ended with the last range unrecorded
+    rng.append((first, last))
+    # Now, convert to an array of text ranges
+    txt = []
+    for pair in rng:
+        if pair[0] == pair[1]:
+            txt.append(str(pair[0]))
+        else:
+            txt.append(str(pair[0]) + '-' + str(pair[1]))
+    # And finally, join the discontiguous ranges
+    return ','.join(txt)
+
+## Display a usage message
+def usage():
+    print "Usage: makesys"
+
+# Parse command-line options
+try:
+    opts, args = getopt.getopt(sys.argv[1:],
+                               "",
+                               [])
+except getopt.GetoptError:
+    usage()
+    sys.exit(2)
+
+# Process command-line options
+for opt, arg in opts:
+    pass
+
+# Check for required arguments
+if len(args) != 0:
+    usage()
+    sys.exit(2)
+
+# Fixed location for the simulation
+root = "/tmp"
+
+# Clobber any existing path
+try:
+    os.rmdir(root + "/sys")
+except:
+    pass
+
+# Useful paths
+procfs = root + "/proc"
+sysfs_kernel = root + "/sys/kernel/pm_api"
+sysfs_sysdev = root + "/sys/devices/system"
+sysfs_cpu = root + "/sys/devices/system/cpu"
+sysfs_rapl = root + "/sys/class/powercap/intel-rapl"
+sysfs_hwmon = root + "/sys/class/hwmon"
+sysfs_pm_cntrs = root + "/sys/cray/pm_counters"
+
+# Parse the simulated architecture and create files
+pos_hts = []
+act_hts = []
+onl_hts = []
+
+
+cpuinfo = []
+processor = 0
+for sockid in range(len(socket)):
+    for cpuid in range(max_cores_per_socket):
+        physicalid = (processor >> 3) & 1
+        coreid = processor % 8
+        apicid = (physicalid * max_hts_per_socket +
+                  int(processor / max_cores_per_socket) +
+                  (coreid << 1))
+        cpuinfo.append(
+            cpuinfofmt.format(
+                processor,
+                physicalid,
+                coreid,
+                apicid,
+                apicid))
+        processor += 1
+
+putfile(procfs + "/cpuinfo", "\n".join(cpuinfo))
+putfile(procfs + "/cray_xt/cname", "c0-0c0s5n2")
+putfile(procfs + "/cray_xt/nid", "22")
+
+sockid = 0
+ht = 0
+for sock in socket:
+
+    hwmon = sysfs_hwmon + "/hwmon{}/device".format(sockid)
+    putfile(hwmon + "/temp1_label", "Physical id {}".format(sockid))
+    putfile(hwmon + "/temp1_input", 20000)
+
+    raplfile = sysfs_rapl + "/intel-rapl:{}".format(sockid)
+    putfile(raplfile + "/name", "package-{}".format(sockid))
+    putfile(raplfile + "/energy_uj", 222577505395)
+    putfile(raplfile + "/constraint_0_power_limit_uw", 120000000)
+
+    raplsubfile = raplfile + "/intel-rapl:{}:0".format(sockid)
+    putfile(raplsubfile + "/name", "dram")
+    putfile(raplsubfile + "/energy_uj", 46653533889)
+    putfile(raplsubfile + "/constraint_0_power_limit_uw", 0)
+
+    for coreid in sock['pos']:
+
+        putfile(hwmon + "/temp{}_label".format(coreid + 2),
+                "Core {}".format(coreid))
+        putfile(hwmon + "/temp{}_input".format(coreid + 2), 20000)
+
+        for htnum in range(0, ht_per_core):
+            if coreid in sock['onl']:
+                cpufile = sysfs_cpu + "/cpu{}".format(ht)
+                topofile = cpufile + "/topology"
+                putfile(topofile + "/physical_package_id", sockid)
+                putfile(topofile + "/core_id", coreid)
+                msrfile = cpufile + "/msr"
+                putfile(msrfile + "/606r", "0xa0e03")
+                putfile(msrfile + "/613r", "0x0")
+                putfile(msrfile + "/61br", "0x0")
+                freqfile = cpufile + "/cpufreq"
+                putfile(freqfile + "/scaling_available_frequencies",
+                        ' '.join([str(x) for x in avail_freqs]))
+                putfile(freqfile + "/scaling_available_governors",
+                        ' '.join([str(x) for x in avail_govs]))
+                putfile(freqfile + "/scaling_setspeed", max(avail_freqs))
+                putfile(freqfile + "/scaling_cur_freq", max(avail_freqs))
+                putfile(freqfile + "/scaling_max_freq", max(avail_freqs))
+                putfile(freqfile + "/scaling_min_freq", min(avail_freqs))
+                putfile(freqfile + "/cpuinfo_cur_freq", max(avail_freqs))
+                putfile(freqfile + "/cpuinfo_max_freq", max(avail_freqs))
+                putfile(freqfile + "/cpuinfo_min_freq", min(avail_freqs))
+                putfile(freqfile + "/scaling_governor", "performance")
+                for stnum in range(0, num_cstates):
+                    statefile = cpufile + "/cpuidle/state{}".format(stnum)
+                    putfile(statefile + "/disable", 0)
+                onl_hts.append(ht)
+            act_hts.append(ht)
+            pos_hts.append(ht)
+            ht += 1
+    sockid += 1
+
+
+# Remaining non-architectural files
+putfile(sysfs_cpu + "/possible", mkrange(pos_hts))
+putfile(sysfs_cpu + "/present", mkrange(act_hts))
+putfile(sysfs_cpu + "/online", mkrange(onl_hts))
+putfile(sysfs_cpu + "/kernel_max", max_cpu - 1)
+putfile(sysfs_kernel + "/num_cstates", num_cstates)
+putfile(sysfs_kernel + "/cstate_limit", num_cstates - 1)
+putfile(sysfs_pm_cntrs + "/energy", "4046482 J")
+putfile(sysfs_pm_cntrs + "/freshness", 896857)
+putfile(sysfs_pm_cntrs + "/generation", 9)
+putfile(sysfs_pm_cntrs + "/power", "43 W")
+putfile(sysfs_pm_cntrs + "/power_cap", "0 W")
+putfile(sysfs_pm_cntrs + "/raw_scan_hz", 10)
+putfile(sysfs_pm_cntrs + "/startup", 1480626874980130)
+putfile(sysfs_pm_cntrs + "/version", 0)
+

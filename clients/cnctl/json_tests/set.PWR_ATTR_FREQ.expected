@@ -1,0 +1,8 @@
+{
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_Attrs"             : [],
+ "PWR_ErrorMessages"     : [ "PWR_ATTR_FREQ is read-only" ],
+ "PWR_ReturnCode"        : -8,
+ "PWR_Messages"          : null
+}

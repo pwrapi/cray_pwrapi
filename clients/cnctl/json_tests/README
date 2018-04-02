@@ -1,0 +1,8 @@
+Every file in this directory is a single test that tests cnctl's JSON
+interface.  Together as a whole they should represent all possible valid
+JSON input packets.  A few examples on how to run these:
+
+	cat cap_val.PWR_ATTR_FREQ_LIMIT_MAX | cnctl -j
+	cat get.PWR_ATTR_all | cnctl -j
+	cat set.PWR_ATTR_CSTATE_LIMIT | cnctl -j
+

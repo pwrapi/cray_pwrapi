@@ -1,0 +1,16 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName":"PWR_ATTR_FREQ_LIMIT_MAX",
+                             "PWR_AttrValue":2301000,
+                             "PWR_TimeSeconds":1426191734,
+                             "PWR_TimeNanoseconds":533763402,
+                             "PWR_ReturnCode":0
+                            }
+                           ],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : 0,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : null
+}

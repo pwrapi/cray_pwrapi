@@ -1,0 +1,75 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+## @package get_attr
+#  Exercise the PWR_ObjAttrGetValue() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_attr, list_name, \
+    get_attr
+
+init(os.path.basename(__file__))
+
+# Basic list tests
+attrs = list_attr()
+if len(attrs) < 1:
+    print error_message(
+        "Expected 1+ attributes, saw {}".format(len(attrs)),
+        json.dumps(attrs, indent=4))
+    sys.exit(100)
+
+names = list_name()
+if len(names) < 1:
+    print error_message(
+        "Expected 1+ objects, saw {}".format(len(names)),
+        json.dumps(names, indent=4))
+    sys.exit(100)
+
+# See if we can perform this test
+socks = list_name(filter="^socket")
+if len(socks) < 1:
+    skip_test("Need 1+ sockets, saw {}".format(len(socks)))
+
+cores = list_name(filter="^core")
+if len(cores) < 1:
+    skip_test("Need 1+ cores, saw {}".format(len(cores)))
+
+hts = list_name(filter="^ht")
+if len(hts) < 1:
+    skip_test("Need 1+ hts, saw {}".format(len(hts)))
+
+# Basic PWR_ObjAttrGetValue() tests
+result = get_attr("PWR_ATTR_TEMP",
+                  socks[0],
+                  method="PWR_ObjAttrGetValue",
+                  desc="#1 PWR_ObjAttrGetValue temperature of socket")
+
+
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0],
+                  method="PWR_ObjAttrGetValue",
+                  desc="#2 PWR_ObjAttrGetValue temperature of core")
+
+
+result = get_attr("PWR_ATTR_CSTATE_LIMIT",
+                  hts[0],
+                  method="PWR_ObjAttrGetValue",
+                  desc="#3 PWR_ObjAttrGetValue climit of ht")
+
+
+result = get_attr("PWR_ATTR_TEMP",
+                  "core.foo.bar",
+                  method="PWR_ObjAttrGetValue",
+                  desc="#4 PWR_ObjAttrGetValue temperature of bad object",
+                  expect=EXPECT_FAILURE)
+
+sys.exit(0)

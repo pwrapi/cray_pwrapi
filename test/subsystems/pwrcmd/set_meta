@@ -1,0 +1,98 @@
+#!/usr/bin/python
+#
+# get_meta - Get Metadata PowerAPI pwrcmd test script
+# Copyright 2017 Cray Inc. All rights reserved.
+
+## @package set_meta
+#  Exercise the PWR_ObjAttrSetMeta() function.
+
+import json
+import os
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test, skip_test_if_not_root
+from pwrcmd import EXPECT_SUCCESS, list_name, set_meta, set_meta_and_check
+
+init(os.path.basename(__file__))
+
+skip_test_if_not_root()
+
+names = list_name()
+if len(names) < 1:
+    print error_message(
+        "Expected 1+ objects, saw {}".format(len(names)),
+        json.dumps(names, indent=4))
+    sys.exit(100)
+
+# Gather objects for test. Skip test if an object type is unavailable.
+mems = list_name(filter="^mem")
+if len(mems) < 1:
+    skip_test("Need 1+ memory objects, saw {}".format(len(mems)))
+
+socks = list_name(filter="^socket")
+if len(socks) < 1:
+    skip_test("Need 1+ sockets, saw {}".format(len(socks)))
+
+"""Supported setting of metadata is limited to:
+
+Object	Attribute                 Metadata
+------  ------------------------  ------------------
+socket  PWR_ATTR_POWER            PWR_MD_TIME_WINDOW
+        PWR_ATTR_POWER_LIMIT_MAX  PWR_MD_TIME_WINDOW
+mem     PWR_ATTR_POWER            PWR_MD_TIME_WINDOW
+        PWR_ATTR_POWER_LIMIT_MAX  PWR_MD_TIME_WINDOW
+
+Note that 'sets' are persistent internal to a PWR_Cntxt but are not necessarily
+persistent outside of that context. The following tests expect that 
+PWR_MD_TIME_WINDOW values associated with PWR_ATTR_POWER_LIMIT_MAX attributes
+as set by the PWR_ROLE_RM role to persist across contexts. It is *not* 
+expected that PWR_MD_TIME_WINDOW values associated with PWR_ATTR_POWER 
+attributes persist across contexts.
+"""
+
+# Basic PWR_ObjAttrSetMeta() tests
+
+# SOCKET
+r = set_meta(meta="PWR_MD_TIME_WINDOW",
+             obj_name=socks[0],
+             value=300000000,
+             attr="PWR_ATTR_POWER",
+             role="PWR_ROLE_RM",
+             method="PWR_ObjAttrSetMeta",
+             desc=("#1 PWR_ObjAttrSetMeta PWR_MD_TIME_WINDOW on socket "
+                   "PWR_ATTR_POWER"),
+             expect=EXPECT_SUCCESS)
+
+r = set_meta_and_check(meta="PWR_MD_TIME_WINDOW",
+                       obj_name=socks[0],
+                       value=999424000,
+                       attr="PWR_ATTR_POWER_LIMIT_MAX",
+                       role="PWR_ROLE_RM",
+                       method="PWR_ObjAttrSetMeta",
+                       desc=("#2 PWR_ObjAttrSetMeta PWR_MD_TIME_WINDOW on "
+                             "socket PWR_ATTR_POWER_LIMIT_MAX"),
+                       expect=EXPECT_SUCCESS)
+
+# MEMORY
+r = set_meta(meta="PWR_MD_TIME_WINDOW",
+             obj_name=mems[0],
+             value=300000000,
+             attr="PWR_ATTR_POWER",
+             role="PWR_ROLE_RM",
+             method="PWR_ObjAttrSetMeta",
+             desc=("#3 PWR_ObjAttrSetMeta PWR_MD_TIME_WINDOW for memory "
+                   "PWR_ATTR_POWER"),
+             expect=EXPECT_SUCCESS)
+
+r = set_meta_and_check(meta="PWR_MD_TIME_WINDOW",
+                       obj_name=mems[0],
+                       value=300000000,
+                       attr="PWR_ATTR_POWER_LIMIT_MAX",
+                       role="PWR_ROLE_RM",
+                       method="PWR_ObjAttrSetMeta",
+                       desc=("#4 PWR_ObjAttrSetMeta PWR_MD_TIME_WINDOW on "
+                             "socket PWR_ATTR_POWER_LIMIT_MAX"),
+                       expect=EXPECT_SUCCESS)
+
+sys.exit(0)

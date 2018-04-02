@@ -1,0 +1,37 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016-2017, Cray Inc.
+# All rights reserved.
+
+## @package set_attr
+#  Exercise the PWR_ObjAttrSetValue() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test, skip_test_if_not_root
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_name, \
+    set_attr_and_check
+
+#
+# Initialize this test
+#
+init(os.path.basename(__file__))
+
+skip_test_if_not_root()
+
+hts = list_name(filter="^ht")
+
+if not set_attr_and_check("PWR_ATTR_CSTATE_LIMIT",
+                          hts[0:1],
+                          1,
+                          "PWR_ROLE_RM",
+                          method="PWR_ObjAttrSetValue",
+                          desc="#1 PWR_GrpAttrSetValue set cstate limit 1 pass"):
+    sys.exit(110)
+
+sys.exit(0)

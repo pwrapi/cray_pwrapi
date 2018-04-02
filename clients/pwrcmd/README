@@ -1,0 +1,51 @@
+The pwrtest command is a client of PowerAPI, providing a tool to test the
+PowerAPI library. The postmortem command consumes the output of pwrtest and
+creates a more useful debugging output, in the event that pwrtest has any
+failures.
+
+The pwrtest command uses linenoise, a small self-contained alternative
+to readline and libedit, for command line editing during interactive
+operation. The linenoise source is included as a git-subtree in the
+pwrtest source code.
+
+The remote repository for linenoise is:
+
+	https://github.com/antirez/linenoise.git
+
+The subtree is maintained under the pwrtest source at:
+
+	deps/linenoise
+
+
+
+WORKING WITH SUBTREES
+---------------------
+
+Some information about subtrees:
+
+1. The subtree is part of the stash project. Developers don’t have to do
+anything special when cloning the source, prior to building.
+
+2. A copy of the subtree code is stored in the stash project. Building
+the source is not dependent upon the continued existence of the remote
+repository that was the source for the subtree.
+
+3. If the subtree needs to be updated to the remote repository it was
+cloned from, the git-subtree command has subcommands to do this (see
+get-subtree(1) in the man pages):
+
+	git subtree pull  -P <prefix> <repository> <ref> 
+	git subtree merge -P <prefix> <commit>
+
+4. If the subtree has a change that needs to be provided to the remote
+repository it was cloned from, the git-subtree command has subcommands
+to do this (see get-subtree(1) in the man pages):
+
+	git subtree push -P <prefix> <repository> <ref> 
+	git subtree split -P <prefix> [OPTIONS] [<commit>]
+
+5. Developers should avoid commits that contain changes to the container
+projects and the subtree. A commit should only contain changes either to
+the subtree or the container project. If a commit contains both it
+should be split into multiple commits.
+

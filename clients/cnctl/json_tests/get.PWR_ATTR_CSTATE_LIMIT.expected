@@ -1,0 +1,16 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_CSTATE_LIMIT",
+                             "PWR_AttrValue"       : 4,
+                             "PWR_TimeSeconds"     : 1426191323,
+                             "PWR_TimeNanoseconds" : 174984191,
+                             "PWR_ReturnCode"      : 0
+                            }
+                           ],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : 0,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : null
+}

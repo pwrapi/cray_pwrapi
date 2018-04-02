@@ -1,0 +1,51 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016-2017, Cray Inc.
+# All rights reserved.
+
+import sys
+import subprocess
+from subprocess import Popen, PIPE
+import json
+import collections
+import os
+
+# Import common test code
+import cnctl
+from common import init, test_name
+
+#
+# Initialize this test
+#
+init(os.path.basename(__file__))
+
+#
+# Expected attributes for an attribute capabilities request
+#
+expected_attrs = [
+    "PWR_ATTR_CSTATE_LIMIT",
+    "PWR_ATTR_FREQ",
+    "PWR_ATTR_FREQ_LIMIT_MIN",
+    "PWR_ATTR_FREQ_LIMIT_MAX"
+]
+
+#
+# Read the attributes
+#
+cnctl_output = cnctl.list_attr()
+
+#
+# Compare the two sets
+#
+sets_are_equal = lambda x, y: collections.Counter(x) == collections.Counter(y)
+
+if sets_are_equal(cnctl_output['PWR_AttrCapabilities'], expected_attrs):
+    print test_name() + ": PASS"
+else:
+    print test_name() + ": FAIL: " + \
+        str(cnctl_output['PWR_AttrCapabilities']) + \
+        " != " + str(expected_attrs)
+    sys.exit(2)
+
+sys.exit(0)
+

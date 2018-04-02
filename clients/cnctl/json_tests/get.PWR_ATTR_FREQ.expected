@@ -1,0 +1,14 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_FREQ",
+                             "PWR_AttrValue"       : 2301000,
+                             "PWR_TimeSeconds"     : 1426191555,
+                             "PWR_TimeNanoseconds" : 448789514,
+                             "PWR_ReturnCode"      : 0}],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : 0,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : null
+}

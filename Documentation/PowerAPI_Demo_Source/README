@@ -1,0 +1,14 @@
+README for Power API Application-level Power Monitoring and Control Demo Source
+
+To build:
+1) Ensure the Power API environment is loaded
+    > module load powerapi
+2) Type `make`
+    > make
+
+
+To execute:
+1) Choose the OMP_NUM_THREADS you'd like and export (optional)
+    > export OMP_NUM_THREADS=12
+2) Launch pwrdemo on a single compute node
+    > [launcher] [launcher options] ./pwrdemo [pwrdemo options]

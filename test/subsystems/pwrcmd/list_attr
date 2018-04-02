@@ -1,0 +1,58 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+import sys
+import subprocess
+from subprocess import Popen, PIPE
+import json
+import collections
+import os
+
+# Import common test code
+import pwrcmd
+from common import init, test_name
+
+#
+# Initialize this test
+#
+init(os.path.basename(__file__))
+
+#
+# Expected attributes for an attribute capabilities request
+#
+expected_attrs = [
+    u'PWR_ATTR_CSTATE_LIMIT',
+    u'PWR_ATTR_ENERGY',
+    u'PWR_ATTR_FREQ',
+    u'PWR_ATTR_FREQ_LIMIT_MAX',
+    u'PWR_ATTR_FREQ_LIMIT_MIN',
+    u'PWR_ATTR_FREQ_REQ',
+    u'PWR_ATTR_GOV',
+    u'PWR_ATTR_OS_ID',
+    u'PWR_ATTR_POWER',
+    u'PWR_ATTR_POWER_LIMIT_MAX',
+    u'PWR_ATTR_TEMP',
+    u'PWR_ATTR_THROTTLED_TIME'
+]
+
+#
+# Read the attributes
+#
+actual_attrs = pwrcmd.list_attr()
+
+#
+# Compare the two sets
+#
+sets_are_equal = lambda x, y: collections.Counter(x) == collections.Counter(y)
+
+if sets_are_equal(actual_attrs, expected_attrs):
+    print test_name() + ": PASS"
+else:
+    print test_name() + ": FAIL: " + str(actual_attrs) + " != " + \
+        str(expected_attrs)
+    sys.exit(2)
+
+sys.exit(0)
+

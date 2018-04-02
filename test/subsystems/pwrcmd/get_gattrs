@@ -1,0 +1,101 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+## @package get_gattrs
+#  Exercise the PWR_GrpAttrGetValues() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_name, \
+    get_attr
+
+def check_data_types(result, expectlength, rngflt, rngint):
+    length = len(result['attr_vals'])
+    if length != expectlength:
+        print error_message(
+            "Expected {} attributes, saw {}".format(
+                expectlength, length),
+            json.dumps(result, indent=4))
+        return False
+    for i in rngflt:
+        if not isinstance(result['attr_vals'][i], float):
+            print error_message(
+                "Expect attr value {} to be type float".format(i),
+                json.dumps(result, indent=4))
+            return False
+    for i in rngint:
+        if not isinstance(result['attr_vals'][i], int):
+            print error_message(
+                "Expect attr value {} to be type int".format(i),
+                json.dumps(result, indent=4))
+            return False
+    return True
+
+init(os.path.basename(__file__))
+
+# See if we can perform this test
+cores = list_name(filter="^core")
+hts = list_name(filter="^ht")
+if len(cores) < 2:
+    skip_test("Need 2+ cores, saw {}".format(len(cores)))
+if len(hts) < 2:
+    skip_test("Need 2+ hts, saw {}".format(len(hts)))
+
+# Basic PWR_GrpAttrGetValues() tests
+
+# Testing against ht objects
+# PWR_ATTR_FREQ is valid double
+# PWR_ATTR_CSTATE_LIMIT is valid int
+# PWR_ATTR_TEMP is invalid
+# PWR_ATTR_POWER is invalid
+
+# 1 pass test (spoof multiple objects, attributes)
+result = get_attr(["PWR_ATTR_FREQ", ""],
+                  hts[0:1] + [""],
+                  method="PWR_GrpAttrGetValues",
+                  desc="#1 PWR_GrpAttrGetValues freq on ht")
+
+# 1 fail test (spoof multiple objects, attributes)
+result = get_attr(["PWR_ATTR_TEMP", ""],
+                  hts[0:1] + [""],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValues",
+                  desc="#2 PWR_GrpAttrGetValue temp on ht (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 2 pass test (attributes, spoofed hts)
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_CSTATE_LIMIT"],
+                  hts[0:1] + [""],
+                  method="PWR_GrpAttrGetValues",
+                  desc="#3 PWR_GrpAttrGetValue on freq+climit on ht")
+
+# 4 pass test
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_CSTATE_LIMIT"],
+                  hts[0:2],
+                  method="PWR_GrpAttrGetValues",
+                  desc="#4 PWR_GrpAttrGetValue on freq+climit on 2hts")
+if not check_data_types(result, 4, range(0, 4, 2), range(1, 4, 2)):
+    sys.exit(1)
+
+# mixed pass/fail
+result = get_attr(["PWR_ATTR_CSTATE_LIMIT", "PWR_ATTR_TEMP"],
+                  hts[0:1] + cores[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP"),
+                   (cores[0], "PWR_ATTR_CSTATE_LIMIT")],
+                  method = "PWR_GrpAttrGetValues",
+                  desc = "#5 PWR_GrpAttrGetValue on climit+temp on ht+core",
+                  expect = EXPECT_FAILURE)
+if not check_data_types(result, 4, range(1, 4, 2), range(0, 4, 2)):
+    sys.exit(1)
+
+sys.exit(0)
+
+

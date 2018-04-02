@@ -1,0 +1,29 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName"              : "PWR_ATTR_FREQ_LIMIT_MIN",
+                             "PWR_AttrValueCapabilities" : [
+                                                            2301000,
+                                                            2300000,
+                                                            2200000,
+                                                            2100000,
+                                                            2000000,
+                                                            1900000,
+                                                            1800000,
+                                                            1700000,
+                                                            1600000,
+                                                            1500000,
+                                                            1400000,
+                                                            1300000,
+                                                            1200000
+                                                           ],
+                             "PWR_ReturnCode"            : 0
+                            }
+                           ],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : 0,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : null
+}
+

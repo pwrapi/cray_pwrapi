@@ -1,0 +1,92 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+## @package get_attrs
+#  Exercise the PWR_ObjAttrGetValues() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_name, \
+    get_attr
+
+init(os.path.basename(__file__))
+
+# See if we can perform this test
+hts = list_name(filter="^ht")
+if len(hts) < 2:
+    skip_test("Need 2+ hts, saw {}".format(len(hts)))
+
+# Basic PWR_ObjAttrGetValues() tests
+# Adding "" to a list of attributes spoofs multiple attributes
+
+# Testing against ht.0 object
+# PWR_ATTR_FREQ is valid
+# PWR_ATTR_CSTATE_LIMIT is valid
+# PWR_ATTR_TEMP is invalid
+# PWR_ATTR_POWER is invalid
+
+# 1 success test (spoof multiple attributes)
+result = get_attr(["PWR_ATTR_FREQ", ""],
+                  hts[0:1],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#1 PWR_GrpAttrGetValues freq of ht")
+
+# 1 fail test (spoof multiple attributes)
+result = get_attr(["PWR_ATTR_TEMP", ""],
+                  hts[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#2 PWR_GrpAttrGetValues temp of ht (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 2 success test
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_CSTATE_LIMIT"],
+                  hts[0:1],
+                  method="PWR_ObjAttrGetValues",
+                  desc="# 3PWR_GrpAttrGetValues freq+climit of ht")
+
+# 2 fail test
+result = get_attr(["PWR_ATTR_TEMP", "PWR_ATTR_POWER"],
+                  hts[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP"),
+                   (hts[0], "PWR_ATTR_POWER")],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#4 PWR_GrpAttrGetValues temp+power of ht",
+                  expect=EXPECT_FAILURE)
+
+# 1 pass, 1 fail test
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_POWER"],
+                  hts[0:1],
+                  [(hts[0], "PWR_ATTR_POWER")],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#5 PWR_GrpAttrGetValues freq+power of ht",
+                  expect=EXPECT_FAILURE)
+
+# 2 pass, 1 fail test
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_TEMP", "PWR_ATTR_CSTATE_LIMIT"],
+                  hts[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#6 PWR_GrpAttrGetValues freq+temp+climit of ht",
+                  expect=EXPECT_FAILURE)
+
+# 1 pass, 2 fail test
+result = get_attr(["PWR_ATTR_FREQ", "PWR_ATTR_TEMP", "PWR_ATTR_POWER"],
+                  hts[0:1],
+                  [(hts[0], "PWR_ATTR_POWER"),
+                   (hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_ObjAttrGetValues",
+                  desc="#7 PWR_GrpAttrGetValues freq+temp+power of ht",
+                  expect=EXPECT_FAILURE)
+
+sys.exit(0)
+
+

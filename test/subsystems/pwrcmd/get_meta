@@ -1,0 +1,166 @@
+#!/usr/bin/python
+#
+# get_meta - Get Metadata PowerAPI pwrcmd test script
+# Copyright 2017 Cray Inc. All rights reserved.
+
+## @package get_meta
+#  Exercise the PWR_ObjAttrGetMeta() function.
+
+import json
+import os
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test
+from pwrcmd import EXPECT_SUCCESS, list_name, get_meta
+
+# Maps to PWR_RET_NO_META for metadata we expect to not have support
+EXPECT_NO_META = -7
+
+init(os.path.basename(__file__))
+
+names = list_name()
+if len(names) < 1:
+    print error_message(
+        "Expected 1+ objects, saw {}".format(len(names)),
+        json.dumps(names, indent=4))
+    sys.exit(100)
+
+# Gather objects for test. Skip test if an object type is unavailable.
+mems = list_name(filter="^mem")
+if len(mems) < 1:
+    skip_test("Need 1+ memory objects, saw {}".format(len(mems)))
+
+pplanes = list_name(filter="^pm_counters")
+if len(pplanes) < 1:
+    skip_test("Need 1+ power plane objects, saw {}".format(len(pplanes)))
+
+socks = list_name(filter="^socket")
+if len(socks) < 1:
+    skip_test("Need 1+ sockets, saw {}".format(len(socks)))
+
+cores = list_name(filter="^core")
+if len(cores) < 1:
+    skip_test("Need 1+ cores, saw {}".format(len(cores)))
+
+hts = list_name(filter="^ht")
+if len(hts) < 1:
+    skip_test("Need 1+ hts, saw {}".format(len(hts)))
+
+
+"""Objects to test:
+        * node
+        * memory
+        * power plane
+        * socket
+        * cores
+        * ht
+"""
+
+# Basic PWR_ObjAttrGetMeta() tests
+
+# NODE
+r = get_meta("PWR_MD_SAMPLE_RATE",
+             "node.0",
+             desc="#1 PWR_ObjAttrGetMeta sample rate of a node",
+             expect=EXPECT_NO_META)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             "node.0",
+             desc="#2 PWR_ObjAttrGetMeta vendor info of a node",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_UPDATE_RATE",
+             "node.0",
+             attr="PWR_ATTR_POWER",
+             desc="#3 PWR_ObjAttrGetMeta update rate of a node power attr",
+             expect=EXPECT_SUCCESS)
+
+# POWER PLANE
+r = get_meta("PWR_MD_NAME",
+             pplanes[0],
+             desc="#4 PWR_ObjAttrGetMeta name of a power plane",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_UPDATE_RATE",
+             pplanes[0],
+             attr="PWR_ATTR_POWER",
+             desc=("#5 PWR_ObjAttrGetMeta update rate of a power plane "
+                   "power attr"),
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             pplanes[0],
+             desc="#6 PWR_ObjAttrGetMeta vendor info of a power plane",
+             expect=EXPECT_SUCCESS)
+
+# SOCKET
+r = get_meta("PWR_MD_NAME",
+             socks[0],
+             desc="#7 PWR_ObjAttrGetMeta name of a socket",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_UPDATE_RATE",
+             socks[0],
+             attr="PWR_ATTR_POWER",
+             desc="#8 PWR_ObjAttrGetMeta update rate of a socket power attr",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             socks[0],
+             desc="#9 PWR_ObjAttrGetMeta vendor info of a socket",
+             expect=EXPECT_SUCCESS)
+
+
+# MEMORY
+r = get_meta("PWR_MD_NAME",
+             mems[0],
+             desc="#10 PWR_ObjAttrGetMeta name of a memory object",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_UPDATE_RATE",
+             mems[0],
+             attr="PWR_ATTR_POWER",
+             desc="#11 PWR_ObjAttrGetMeta update rate of a memory power attr",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             mems[0],
+             desc="#12 PWR_ObjAttrGetMeta vendor info of a memory object",
+             expect=EXPECT_SUCCESS)
+
+# CORE
+r = get_meta("PWR_MD_NAME",
+             cores[0],
+             desc="#13 PWR_ObjAttrGetMeta name of a core",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_DESC",
+             cores[0],
+             attr="PWR_ATTR_TEMP",
+             desc="#14 PWR_ObjAttrGetMeta description of a core temp attr",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             cores[0],
+             desc="#15 PWR_ObjAttrGetMeta vendor info of a core",
+             expect=EXPECT_SUCCESS)
+
+# HARDWARE THREAD (HT)
+r = get_meta("PWR_MD_NAME",
+             hts[0],
+             desc="#16 PWR_ObjAttrGetMeta name of an HT",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VALUE_LEN",
+             hts[0],
+             attr="PWR_ATTR_FREQ",
+             desc="#17 PWR_ObjAttrGetMeta value len of an HT freq attr",
+             expect=EXPECT_SUCCESS)
+
+r = get_meta("PWR_MD_VENDOR_INFO",
+             hts[0],
+             desc="#18 PWR_ObjAttrGetMeta vendor info of an HT",
+             expect=EXPECT_SUCCESS)
+
+sys.exit(0)

@@ -1,0 +1,11 @@
+{
+ "PWR_Function"          : "PWR_ObjAttrGetValues",
+ "PWR_Attrs"             : [
+                            { "PWR_AttrName" : "PWR_ATTR_CSTATE_LIMIT" },
+                            { "PWR_AttrName" : "PWR_ATTR_FREQ" },
+                            { "PWR_AttrName" : "PWR_ATTR_FREQ_LIMIT_MAX" },
+                            { "PWR_AttrName" : "PWR_ATTR_FREQ_LIMIT_MIN" }
+                           ],
+ "PWR_MajorVersion"      : 32,
+ "PWR_MinorVersion"      : 67
+}

@@ -1,0 +1,29 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+import sys
+import subprocess
+from subprocess import Popen, PIPE
+import json
+import collections
+import os
+
+# Import common test code
+import cnctl
+from common import init, test_name
+
+
+#
+# Initialize this test
+#
+init(os.path.basename(__file__))
+
+json_cmd = '{"PWR_Function": "PWR_UIDList", "PWR_MajorVersion": 0, "PWR_MinorVersion": 1}'
+
+cnctl_output = cnctl.exec_cnctl_json(json_cmd)
+
+print test_name() + ": PASS"
+
+sys.exit(0)

@@ -1,0 +1,42 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016-2017, Cray Inc.
+# All rights reserved.
+
+## @package set_gattr
+#  Exercise the PWR_GrpAttrSetValue() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test, skip_test_if_not_root
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_name, \
+    set_attr_and_check
+
+#
+# Initialize this test
+#
+init(os.path.basename(__file__))
+
+skip_test_if_not_root()
+
+# See if we can perform this test
+cores = list_name(filter="^core")
+hts = list_name(filter="^ht")
+if len(cores) < 2:
+    skip_test("Need 2+ cores, saw {}".format(len(cores)))
+if len(hts) < 2:
+    skip_test("Need 2+ hts, saw {}".format(len(hts)))
+
+if not set_attr_and_check("PWR_ATTR_CSTATE_LIMIT",
+                          hts[0:2],
+                          1,
+                          "PWR_ROLE_RM",
+                          desc="#1 PWR_GrpAttrSetValue set cstate limit 2 pass"):
+    sys.exit(112)
+
+sys.exit(0)

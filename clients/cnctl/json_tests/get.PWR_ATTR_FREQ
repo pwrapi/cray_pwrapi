@@ -1,0 +1,8 @@
+{
+ "PWR_Function"          : "PWR_ObjAttrGetValues",
+ "PWR_Attrs"             : [
+                            { "PWR_AttrName" : "PWR_ATTR_FREQ" }
+                           ],
+ "PWR_MajorVersion"      : 32,
+ "PWR_MinorVersion"      : 67
+}

@@ -1,0 +1,25 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName"   : "PWR_ATTR_CSTATE_LIMIT",
+                             "PWR_ReturnCode" : 0
+                            },
+                            {
+                             "PWR_AttrName"   : "PWR_ATTR_FREQ",
+                             "PWR_ReturnCode" : -8
+                            },
+                            {
+                             "PWR_AttrName"   : "PWR_ATTR_FREQ_LIMIT_MAX",
+                             "PWR_ReturnCode" : 0
+                            },
+                            {
+                             "PWR_AttrName"   : "PWR_ATTR_FREQ_LIMIT_MIN",
+                             "PWR_ReturnCode" : 0
+                            }
+                           ],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : -8,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : ["ERROR(set_attr_val:516):PWR_ATTR_FREQ is read-only"]
+}

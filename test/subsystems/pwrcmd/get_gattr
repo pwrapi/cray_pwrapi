@@ -1,0 +1,93 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2016, Cray Inc.
+# All rights reserved.
+
+## @package get_gattr
+#  Exercise the PWR_GrpAttrGetValue() function.
+
+import collections
+import json
+import os
+import re
+import sys
+
+# Import common test code
+from common import init, error_message, skip_test
+from pwrcmd import EXPECT_SUCCESS, EXPECT_FAILURE, list_name, \
+    get_attr
+
+init(os.path.basename(__file__))
+
+# See if we can perform this test
+cores = list_name(filter="^core")
+hts = list_name(filter="^ht")
+if len(cores) < 2:
+    skip_test("Need 2+ cores, saw {}".format(len(cores)))
+if len(hts) < 2:
+    skip_test("Need 2+ hts, saw {}".format(len(hts)))
+
+# Basic PWR_GrpAttrGetValue() tests
+# Adding "" to a list of objects spoofs multiple objects
+
+# Testing attribute PWR_ATTR_TEMP
+# Against cores is valid
+# Against hts is invalid
+
+# 1 pass test (spoof multiple objects)
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0:1] + [""],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#1 PWR_GrpAttrGetValue temp on core")
+
+# 1 fail test (spoof multiple objects)
+result = get_attr("PWR_ATTR_TEMP",
+                  hts[0:1] + [""],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#2 PWR_GrpAttrGetValue temp on ht (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 2 pass test
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0:2],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#3 PWR_GrpAttrGetValue temp on 2 cores")
+
+# 2 fail test
+result = get_attr("PWR_ATTR_TEMP",
+                  hts[0:2],
+                  [(hts[0], "PWR_ATTR_TEMP"),
+                   (hts[1], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#4 PWR_GrpAttrGetValue temp on 2 hts (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 1 pass, 1 fail test
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0:1] + hts[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#5 PWR_GrpAttrGetValue temp on core+ht (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 2 pass, 1 fail test
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0:2] + hts[0:1],
+                  [(hts[0], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#6 PWR_GrpAttrGetValue temp on 2cores+ht (fail)",
+                  expect=EXPECT_FAILURE)
+
+# 1 pass, 2 fail test
+result = get_attr("PWR_ATTR_TEMP",
+                  cores[0:1] + hts[0:2],
+                  [(hts[0], "PWR_ATTR_TEMP"),
+                   (hts[1], "PWR_ATTR_TEMP")],
+                  method="PWR_GrpAttrGetValue",
+                  desc="#7 PWR_GrpAttrGetValue freq on core+2hts (fail)",
+                  expect=EXPECT_FAILURE)
+
+sys.exit(0)
+
+

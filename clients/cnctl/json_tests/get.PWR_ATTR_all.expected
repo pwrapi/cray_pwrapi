@@ -1,0 +1,37 @@
+{
+ "PWR_Attrs"             : [
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_CSTATE_LIMIT",
+                             "PWR_AttrValue"       : 4,
+                             "PWR_TimeSeconds"     : 1426192074,
+                             "PWR_TimeNanoseconds" : 160292015,
+                             "PWR_ReturnCode"      : 0
+                            },
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_FREQ",
+                             "PWR_AttrValue"       : 2301000,
+                             "PWR_TimeSeconds"     : 1426192074,
+                             "PWR_TimeNanoseconds" : 160345507,
+                             "PWR_ReturnCode"      : 0
+                            },
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_FREQ_LIMIT_MAX",
+                             "PWR_AttrValue"       : 2301000,
+                             "PWR_TimeSeconds"     : 1426192074,
+                             "PWR_TimeNanoseconds" : 160361443,
+                             "PWR_ReturnCode"      : 0
+                            },
+                            {
+                             "PWR_AttrName"        : "PWR_ATTR_FREQ_LIMIT_MIN",
+                             "PWR_AttrValue"       : 1200000,
+                             "PWR_TimeSeconds"     : 1426192074,
+                             "PWR_TimeNanoseconds" : 160374032,
+                             "PWR_ReturnCode"      : 0
+                            }
+                           ],
+ "PWR_MajorVersion"      : 0,
+ "PWR_MinorVersion"      : 1,
+ "PWR_ReturnCode"        : 0,
+ "PWR_Messages"          : null,
+ "PWR_ErrorMessages"     : null
+}
